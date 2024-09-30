@@ -16,6 +16,7 @@ struct BynarTree
     size_t size_element;
 };
 
+
 void create_bynar_tree(BynarTree *tree, size_t size_element);
 void insert_top(BynarTree *tree, void *value, int (*comparison)(const void*, const void*));
 void* find_elem(BynarTree *tree, void *value, int (*comparison)(const void*, const void*));

@@ -34,7 +34,7 @@ int create_stack(size_t capacity)
     do
     {
         descriptor = rand();
-        void *ptr = find_elem(&tree, &descriptor, comparison_desc);
+        ptr = find_elem(&tree, &descriptor, comparison_desc);
     } while (ptr != NULL);
 
     stack_t st = {};
@@ -103,5 +103,13 @@ static int comparison_desc(const void *a, const void *b)
     stack_t* st2 = (stack_t*)b;
     return st1->descriptor - st2->descriptor;
 }
+
+void destroy_stack(int descriptor)
+{
+    stack_t *st = (stack_t*)find_elem(&tree, &descriptor, comparison_desc);
+    free(st->data);
+    delete_elem(&tree, &descriptor, comparison_desc);
+}
+
 
 
