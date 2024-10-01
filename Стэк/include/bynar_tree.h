@@ -3,6 +3,12 @@
 
 #include <stdlib.h>
 
+enum ErrorBynarTree
+{
+    BYNAR_OK               = 0,
+    BYNAR_ERROR_ALLOCATION = 1
+};
+
 struct Top
 {
     Top* left;
@@ -18,7 +24,7 @@ struct BynarTree
 
 
 void create_bynar_tree(BynarTree *tree, size_t size_element);
-void insert_top(BynarTree *tree, void *value, int (*comparison)(const void*, const void*));
+ErrorBynarTree insert_top(BynarTree *tree, void *value, int (*comparison)(const void*, const void*));
 void* find_elem(BynarTree *tree, void *value, int (*comparison)(const void*, const void*));
 bool delete_elem(BynarTree *tree, void *value, int (*comparison)(const void*, const void*));
 

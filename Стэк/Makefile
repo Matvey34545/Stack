@@ -18,4 +18,4 @@ run: $(EXEC_NAME)
 	./$(EXEC_NAME)
 
 clean:
-	rm -f $(OBJ_FILES) $(EXEC_NAME)
+	rm -f $(OBJ_FILES) 

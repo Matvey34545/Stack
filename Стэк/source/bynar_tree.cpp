@@ -10,14 +10,18 @@ void create_bynar_tree(BynarTree *tree, size_t size_element)
     tree->size_element = size_element;
 }
 
-void insert_top(BynarTree *tree, void *value, int (*comparison)(const void*, const void*))
+ErrorBynarTree insert_top(BynarTree *tree, void *value, int (*comparison)(const void*, const void*))
 {
     if (tree->root == NULL)
     {
         tree->root = (Top*)calloc(sizeof(Top), 1);
         tree->root->element = calloc(1, tree->size_element);
+
+        if (tree->root == NULL || tree->root->element == NULL)
+            return BYNAR_ERROR_ALLOCATION;
+
         memcpy(tree->root->element, value, tree->size_element);
-        return;
+        return BYNAR_OK;
     }
     Top *top_last = tree->root;
     Top *top_next = tree->root;
@@ -33,6 +37,9 @@ void insert_top(BynarTree *tree, void *value, int (*comparison)(const void*, con
     top_next = (Top*)calloc(sizeof(Top), 1);
     top_next->element = calloc(1, tree->size_element);
 
+    if (top_next == NULL || top_next->element == NULL)
+        return BYNAR_ERROR_ALLOCATION;
+
     if (comparison(value, top_last->element) >= 0)
         top_last->right = top_next;
 
@@ -40,6 +47,7 @@ void insert_top(BynarTree *tree, void *value, int (*comparison)(const void*, con
         top_last->left = top_next;
 
     memcpy(top_next->element, value, tree->size_element);
+    return BYNAR_OK;
 }
 
 void *find_elem(BynarTree *tree, void *value, int (*comparison)(const void*, const void*))
@@ -96,10 +104,8 @@ bool delete_elem(BynarTree *tree, void *value, int (*comparison)(const void*, co
         }
     }
     if (!is_find)
-    {
-        printf("no delete\n");
         return is_find;
-    }
+
     Top *delete_top = top_last;
 
     if (delete_top->right == NULL)

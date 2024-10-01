@@ -87,7 +87,6 @@ ErrorStack push_stack(int descriptor, size_t size_element, const void *value, In
     if (error!= OK)
         return error;
 
-    memcpy(st->data + st->capacity, &CANARY, sizeof(CANARY));
     memcpy(st->data + st->size - size_element - sizeof(size_t), value, size_element);
     memcpy(st->data + st->size - sizeof(size_t), &size_element, sizeof(size_t));
     CHECK_STACK(st, init)
@@ -103,11 +102,8 @@ ErrorStack pop_stack(int descriptor, void *value, Init init)
     memcpy(value, st->data + st->size, size_element);
 
     ErrorStack error = realocation_st(st);
-    if (error!= OK)
-        return error;
-    memcpy(st->data + st->capacity, &CANARY, sizeof(CANARY));
     CHECK_STACK(st, init)
-    return OK;
+    return error;
 }
 
 static ErrorStack realocation_st(stack_t *st)
@@ -115,7 +111,7 @@ static ErrorStack realocation_st(stack_t *st)
     if (st->capacity <= st->size)
     {
         void *temp = NULL;
-        temp = realloc(st->data - sizeof(CANARY), 2 * st->capacity + 2 * sizeof(CANARY));
+        temp = realloc(st->data - sizeof(CANARY), 2 * st->capacity);
         if (temp == NULL)
             return ERROR_ALLOCATION;
 
@@ -125,7 +121,7 @@ static ErrorStack realocation_st(stack_t *st)
     if (st->capacity >= 4 * st->size && st->capacity > SIZEBUFFER)
     {
         void *temp = NULL;
-        temp = realloc(st->data - sizeof(CANARY), st->capacity / 2 + 2 * sizeof(CANARY));
+        temp = realloc(st->data - sizeof(CANARY), st->capacity / 2);
         if (temp == NULL)
             return ERROR_ALLOCATION;
 
@@ -186,7 +182,7 @@ static ErrorStack stack_error(stack_t *st)
     if (st->capacity >= MAX_SIZE)
         return OVERFLOW_CAPACITY;
 
-    if (*(unsigned int*)(st->data - sizeof(CANARY)) != CANARY)
+    if (*(unsigned int)(st->data - sizeof(CANARY)) != CANARY)
         return LEFT_BUFFER_CANARY_DEAD;
 
     if (*(unsigned int*)(st->data + st->capacity) != CANARY)
@@ -232,8 +228,7 @@ static const char* stack_err_error(ErrorStack error)
         DESCR_(GOING_EDGE);
         DESCR_(OVERFLOW_SIZE);
         DESCR_(OVERFLOW_CAPACITY);
-        DESCR_(LEFT_BUFFER_CANARY_DEAD);
-        DESCR_(RIGHT_BUFFER_CANARY_DEAD);
+        
         DESCR_(OK);
     }
     return "OK";
