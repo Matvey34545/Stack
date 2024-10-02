@@ -12,6 +12,8 @@ const char* FILENAME = "log.txt";
 const unsigned int CANARY = 0xDED0BEDA;
 const size_t MAX_SIZE     = 0xFFFFFFFFFFFFAAAA;
 
+#ifndef NO_DEBUG
+
 struct StDebug
 {
     int born_line;
@@ -20,15 +22,17 @@ struct StDebug
     const char *name;
 };
 
+#endif
+
 struct stack_t
 {
-    const unsigned int canary_left;
+    FOR_DEBUG(const unsigned int canary_left;)
     int descriptor;
     size_t capacity;
     size_t size;
     void* data;
-    StDebug debug;
-    const unsigned int canary_right;
+    FOR_DEBUG(StDebug debug;)
+    FOR_DEBUG(const unsigned int canary_right;)
 };
 
 static BynarTree tree = {};
@@ -37,10 +41,10 @@ static ErrorStack realocation_st(stack_t *st);
 static int comparison_desc(const void *a, const void *b);
 static int comparison_with_descr(const void *descr, const void *st);
 static ErrorStack stack_error(stack_t *st);
-static void dump(const char *error, stack_t *st, Init init);
+static void dump(const char *error, stack_t *st FOR_DEBUG(,Init init));
 static const char* stack_err_error(ErrorStack error);
 
-int create_stack(size_t capacity, Init init, const char* name)
+int create_stack(size_t capacity FOR_DEBUG(,Init init, const char* name))
 {
     static bool struct_descrip_is_ready = false;
     if (!struct_descrip_is_ready)
@@ -58,18 +62,18 @@ int create_stack(size_t capacity, Init init, const char* name)
         ptr = find_elem(&tree, &descriptor, comparison_with_descr);
     } while (ptr != NULL);
 
-    stack_t st = {CANARY, 0, 0, 0, NULL, {init.line, init.file, (char*)init.func, name}, CANARY};
+    stack_t st = {FOR_DEBUG(CANARY,) descriptor, capacity, 0, NULL
+                  FOR_DEBUG(,{init.line, init.file, (char*)init.func, name}, CANARY)};
 
     st.data = calloc(capacity + 2 * sizeof(unsigned int), sizeof(char));
     if (st.data == NULL)
         return -1;
 
-    st.capacity = capacity;
-    st.size = 0;
-    st.descriptor = descriptor;
+    #ifndef NO_DEBUG
     memcpy(st.data, &CANARY, sizeof(CANARY));
     memcpy(st.data + capacity + sizeof(CANARY), &CANARY, sizeof(CANARY));
     st.data = st.data + sizeof(CANARY);
+    #endif
 
     ErrorBynarTree error = insert_top(&tree, &st, comparison_desc);
     if (error != BYNAR_OK)
@@ -78,26 +82,25 @@ int create_stack(size_t capacity, Init init, const char* name)
     return descriptor;
 }
 
-ErrorStack push_stack(int descriptor, size_t size_element, const void *value, Init init)
+ErrorStack push_stack(int descriptor, size_t size_element, const void *value FOR_DEBUG(, Init init))
 {
     stack_t *st = (stack_t*)find_elem(&tree, &descriptor, comparison_with_descr);
-    CHECK_STACK(st, init)
+    FOR_DEBUG(CHECK_STACK(st, init))
     st->size += size_element + sizeof(size_t);
     ErrorStack error = realocation_st(st);
     if (error!= OK)
         return error;
 
-    memcpy(st->data + st->capacity, &CANARY, sizeof(CANARY));
     memcpy(st->data + st->size - size_element - sizeof(size_t), value, size_element);
     memcpy(st->data + st->size - sizeof(size_t), &size_element, sizeof(size_t));
-    CHECK_STACK(st, init)
+    FOR_DEBUG(CHECK_STACK(st, init))
     return OK;
 }
 
-ErrorStack pop_stack(int descriptor, void *value, Init init)
+ErrorStack pop_stack(int descriptor, void *value FOR_DEBUG(, Init init))
 {
     stack_t *st = (stack_t*)find_elem(&tree, &descriptor, comparison_with_descr);
-    CHECK_STACK(st, init)
+    FOR_DEBUG(CHECK_STACK(st, init))
     size_t size_element = *(size_t*)(st->data + st->size - sizeof(size_t));
     st->size -= size_element + sizeof(size_t);
     memcpy(value, st->data + st->size, size_element);
@@ -105,8 +108,8 @@ ErrorStack pop_stack(int descriptor, void *value, Init init)
     ErrorStack error = realocation_st(st);
     if (error!= OK)
         return error;
-    memcpy(st->data + st->capacity, &CANARY, sizeof(CANARY));
-    CHECK_STACK(st, init)
+
+    FOR_DEBUG(CHECK_STACK(st, init))
     return OK;
 }
 
@@ -115,23 +118,24 @@ static ErrorStack realocation_st(stack_t *st)
     if (st->capacity <= st->size)
     {
         void *temp = NULL;
-        temp = realloc(st->data - sizeof(CANARY), 2 * st->capacity + 2 * sizeof(CANARY));
+        temp = realloc(st->data FOR_DEBUG(- sizeof(CANARY)), 2 * st->capacity FOR_DEBUG(+ 2 * sizeof(CANARY)));
         if (temp == NULL)
             return ERROR_ALLOCATION;
 
         st->capacity *= 2;
-        st->data = temp + sizeof(CANARY);
+        st->data = temp FOR_DEBUG(+ sizeof(CANARY));
     }
     if (st->capacity >= 4 * st->size && st->capacity > SIZEBUFFER)
     {
         void *temp = NULL;
-        temp = realloc(st->data - sizeof(CANARY), st->capacity / 2 + 2 * sizeof(CANARY));
+        temp = realloc(st->data FOR_DEBUG(- sizeof(CANARY)), st->capacity / 2 FOR_DEBUG(+ 2 * sizeof(CANARY)));
         if (temp == NULL)
             return ERROR_ALLOCATION;
 
         st->capacity /= 2;
-        st->data = temp + sizeof(CANARY);
+        st->data = temp FOR_DEBUG(+ sizeof(CANARY));
     }
+    FOR_DEBUG(memcpy(st->data + st->capacity, &CANARY, sizeof(CANARY));)
     return OK;
 }
 
@@ -158,10 +162,12 @@ ErrorStack destroy_stack(int descriptor)
     if (st->data == NULL)
         return BUFFER_NULL_PTR;
 
-    free(st->data - sizeof(CANARY));
+    free(st->data FOR_DEBUG(- sizeof(CANARY)));
     delete_elem(&tree, &descriptor, comparison_desc);
     return OK;
 }
+
+#ifndef NO_DEBUG
 
 static ErrorStack stack_error(stack_t *st)
 {
@@ -239,6 +245,8 @@ static const char* stack_err_error(ErrorStack error)
     return "OK";
     #undef DESCR_
 }
+
+#endif
 
 
 
