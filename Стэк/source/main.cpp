@@ -7,10 +7,8 @@ int main()
 {
     int value = 2;
     int value1 = 2;
-    printf("%d\n", sizeof(int*));
+
     int descriptor = create_stack(SIZEBUFFER FOR_DEBUG(, __INIT__, "descriptor"));
-
-
 
     for (int i = 0; i < 12; i++)
     {

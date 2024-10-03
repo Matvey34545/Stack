@@ -62,6 +62,8 @@ static const char* stack_err_error(ErrorStack error);
 
 #endif
 
+FOR_HASH(static void assign_hash(stack_t *st);)
+
 int create_stack(size_t capacity FOR_DEBUG(,Init init, const char* name))
 {
     static bool struct_descrip_is_ready = false;
@@ -96,7 +98,6 @@ int create_stack(size_t capacity FOR_DEBUG(,Init init, const char* name))
     #ifndef NO_HASH
     st.hash_stack = hash_adler_32(st.data, st.capacity);
     st.hash_struct = hash_adler_32(&st, sizeof(stack_t));
-    printf("HASH: %u\n", st.hash_struct);
     #endif
 
     ErrorBynarTree error = insert_top(&tree, &st, comparison_desc);
@@ -114,6 +115,7 @@ ErrorStack push_stack(int descriptor, size_t size_element, const void *value FOR
 {
     stack_t *st = (stack_t*)find_elem(&tree, &descriptor, comparison_with_descr);
     CHECK_STACK(st, init);
+    FOR_HASH(CHECK_HASH(st);)
 
     st->size += size_element + sizeof(size_t);
     ErrorStack error = realocation_st(st);
@@ -123,6 +125,7 @@ ErrorStack push_stack(int descriptor, size_t size_element, const void *value FOR
     memcpy(st->data + st->size - size_element - sizeof(size_t), value, size_element);
     memcpy(st->data + st->size - sizeof(size_t), &size_element, sizeof(size_t));
     CHECK_STACK(st, init);
+    FOR_HASH(assign_hash(st);)
     return OK;
 }
 
@@ -130,6 +133,7 @@ ErrorStack pop_stack(int descriptor, void *value FOR_DEBUG(, Init init))
 {
     stack_t *st = (stack_t*)find_elem(&tree, &descriptor, comparison_with_descr);
     CHECK_STACK(st, init);
+    FOR_HASH(CHECK_HASH(st);)
 
     size_t size_element = *(size_t*)(st->data + st->size - sizeof(size_t));
     st->size -= size_element + sizeof(size_t);
@@ -142,6 +146,7 @@ ErrorStack pop_stack(int descriptor, void *value FOR_DEBUG(, Init init))
         return error;
 
     CHECK_STACK(st, init);
+    FOR_HASH(assign_hash(st);)
     return OK;
 }
 
@@ -250,8 +255,13 @@ static void dump(const char *error, const stack_t *st, Init init)
     fprintf(fp, "size = %d\n\tcapacity = %d\n\tdata[%p]\n\tERROR: %s\n\t", st->size, st->capacity, st->data, error);
 
     #ifndef NO_CANARY
-    fprintf(fp, "LEFT_CANARY = %u\n\tRIGHT_CANARY = %u\n\tLEFT_BUFFER_CANARY = %u\n\tRIGHT_BUFFER_CANARY = %u\n\n\tvalue elements:\n\t",
+    fprintf(fp, "LEFT_CANARY = %u\n\tRIGHT_CANARY = %u\n\tLEFT_BUFFER_CANARY = %u\n\tRIGHT_BUFFER_CANARY = %u\n\n\t",
                 st->canary_left, st->canary_right, *(unsigned int*)(st->data - sizeof(CANARY)), *(unsigned int*)(st->data + st->capacity));
+    #endif
+
+    #ifndef NO_HASH
+    fprintf(fp, "HASH_BUFFER = %u\n\tHASH_STRUCT = %u\n\t", st->hash_stack, st->hash_struct);
+
     #endif
 
     fprintf(fp, "value  elements:\n\t");
@@ -287,6 +297,17 @@ static const char* stack_err_error(ErrorStack error)
     }
     return "OK";
     #undef DESCR_
+}
+
+#endif
+
+#ifndef NO_HASH
+
+static void assign_hash(stack_t *st)
+{
+    st->hash_struct = 0;
+    st->hash_stack = hash_adler_32(st->data, st->capacity);
+    st->hash_struct = hash_adler_32(st, sizeof(stack_t));
 }
 
 #endif

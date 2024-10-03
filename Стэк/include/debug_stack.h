@@ -3,8 +3,6 @@
 
 #include <assert.h>
 
-#NO_HASH
-
 #ifdef NO_CANARY
     #define FOR_CANARY(...)
 
@@ -23,16 +21,13 @@
 
 #define CHECK_HASH(st)                                                      \
     do {                                                                    \
-    FOR_HASH(                                                               \
     hash_t temp_hash = st->hash_struct;                                     \
     st->hash_struct = 0;                                                    \
-    if ((st->hash_struct = hash_adler_32(st, sizeof(st))) != temp_hash)     \
-    {                                                                       \
-        printf("expected hash: %u, real: %u\n", temp_hash, st->hash_struct);\
+    if (hash_adler_32(st, sizeof(stack_t)) != temp_hash)                    \
         assert(0);                                                          \
-    }                                                                       \
-    if ((st->hash_stack = hash_adler_32(st->data, st->capacity)) != temp_hash);\
-        assert(0);)                                                         \
+                                                                            \
+    if (st->hash_stack != hash_adler_32(st->data, st->capacity))            \
+        assert(0);                                                          \
                                                                             \
     } while(0)
 
@@ -43,7 +38,6 @@
     do {                                                                   \
         if (stack_error(st) != OK)                                         \
             assert(0);                                                     \
-        CHECK_HASH(st);                                                    \
                                                                            \
     } while(0)
 
@@ -58,7 +52,6 @@
             dump(stack_err_error(stack_error(st)), st, init_call);             \
             assert(0);                                                         \
         }                                                                      \
-        CHECK_HASH(st);                                                        \
     } while(0)
 
 #endif
