@@ -4,13 +4,15 @@
 #include <stdlib.h>
 #include <string.h>
 
-void create_bynar_tree(BynarTree *tree, size_t size_element)
+ErrorBynarTree create_bynar_tree(BynarTree *tree, size_t size_element)
 {
     tree->root = NULL;
     tree->size_element = size_element;
+
+    return BYNAR_OK;
 }
 
-ErrorBynarTree insert_top(BynarTree *tree, void *value, int (*comparison)(const void*, const void*))
+ErrorBynarTree insert_top(BynarTree *tree, const void *value, int (*comparison)(const void*, const void*))
 {
     if (tree->root == NULL)
     {
@@ -23,6 +25,7 @@ ErrorBynarTree insert_top(BynarTree *tree, void *value, int (*comparison)(const 
         memcpy(tree->root->element, value, tree->size_element);
         return BYNAR_OK;
     }
+
     Top *top_last = tree->root;
     Top *top_next = tree->root;
     while (top_next != NULL)
@@ -30,11 +33,12 @@ ErrorBynarTree insert_top(BynarTree *tree, void *value, int (*comparison)(const 
         top_last = top_next;
         if (comparison(value, top_last->element) >= 0)
             top_next = top_last->right;
-
         else
             top_next = top_last->left;
     }
+
     top_next = (Top*)calloc(sizeof(Top), 1);
+
     top_next->element = calloc(1, tree->size_element);
 
     if (top_next == NULL || top_next->element == NULL)
@@ -42,7 +46,6 @@ ErrorBynarTree insert_top(BynarTree *tree, void *value, int (*comparison)(const 
 
     if (comparison(value, top_last->element) >= 0)
         top_last->right = top_next;
-
     else
         top_last->left = top_next;
 
@@ -50,13 +53,13 @@ ErrorBynarTree insert_top(BynarTree *tree, void *value, int (*comparison)(const 
     return BYNAR_OK;
 }
 
-void *find_elem(BynarTree *tree, void *value, int (*comparison)(const void*, const void*))
+void *find_elem(const BynarTree *tree, const void *value, int (*comparison)(const void*, const void*))
 {
     Top *top_last = tree->root;
     Top *top_next = tree->root;
     bool is_find = false;
 
-    while (top_next != NULL &&  !is_find)
+    while (top_next != NULL && !is_find)
     {
         top_last = top_next;
         if (comparison(value, top_last->element) > 0)
@@ -77,8 +80,9 @@ void *find_elem(BynarTree *tree, void *value, int (*comparison)(const void*, con
     return NULL;
 }
 
-bool delete_elem(BynarTree *tree, void *value, int (*comparison)(const void*, const void*))
+bool delete_elem(BynarTree *tree, const void *value, int (*comparison)(const void*, const void*))
 {
+// simplify
     if (tree->root == NULL)
         return false;
 

@@ -1,6 +1,7 @@
 #include "stack.h"
 #include "bynar_tree.h"
 #include "debug_stack.h"
+#include "hash.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -27,8 +28,8 @@ const unsigned int CANARY = 0xDED0BEDA;
 struct StDebug
 {
     int born_line;
-    char *born_file;
-    char *born_func;
+    const char *born_file;
+    const char *born_func;
     const char *name;
 };
 
@@ -37,7 +38,9 @@ struct StDebug
 struct stack_t
 {
     FOR_CANARY(const unsigned int canary_left;)
-    int descriptor;
+    const int descriptor;
+    FOR_HASH(hash_t hash_struct;)
+    FOR_HASH(hash_t hash_stack;)
     size_t capacity;
     size_t size;
     void* data;
@@ -50,11 +53,11 @@ static BynarTree tree = {};
 static ErrorStack realocation_st(stack_t *st);
 static int comparison_desc(const void *a, const void *b);
 static int comparison_with_descr(const void *descr, const void *st);
-static ErrorStack stack_error(stack_t *st);
+static ErrorStack stack_error(const stack_t *st);
 
 #ifndef NO_DEBUG
 
-static void dump(const char *error, stack_t *st FOR_DEBUG(,Init init));
+static void dump(const char *error, const stack_t *st FOR_DEBUG(,Init init));
 static const char* stack_err_error(ErrorStack error);
 
 #endif
@@ -64,12 +67,12 @@ int create_stack(size_t capacity FOR_DEBUG(,Init init, const char* name))
     static bool struct_descrip_is_ready = false;
     if (!struct_descrip_is_ready)
     {
+        srand(time(NULL));
         create_bynar_tree(&tree, sizeof(stack_t));
         struct_descrip_is_ready = true;
     }
 
-    srand(time(NULL));
-    int descriptor = 0;
+    int descriptor = -1;
     void *ptr = NULL;
     do
     {
@@ -77,7 +80,7 @@ int create_stack(size_t capacity FOR_DEBUG(,Init init, const char* name))
         ptr = find_elem(&tree, &descriptor, comparison_with_descr);
     } while (ptr != NULL);
 
-    stack_t st = {FOR_CANARY(CANARY,) descriptor, capacity, 0, NULL
+    stack_t st = {FOR_CANARY(CANARY,) descriptor, FOR_HASH(0, 0,) capacity, 0, NULL
                   FOR_DEBUG(,{init.line, init.file, (char*)init.func, name}) FOR_CANARY(, CANARY)};
 
     st.data = calloc(capacity FOR_CANARY(+ 2 * sizeof(unsigned int)), sizeof(char));
@@ -90,17 +93,28 @@ int create_stack(size_t capacity FOR_DEBUG(,Init init, const char* name))
     st.data = st.data + sizeof(CANARY);
     #endif
 
+    #ifndef NO_HASH
+    st.hash_stack = hash_adler_32(st.data, st.capacity);
+    st.hash_struct = hash_adler_32(&st, sizeof(stack_t));
+    printf("HASH: %u\n", st.hash_struct);
+    #endif
+
     ErrorBynarTree error = insert_top(&tree, &st, comparison_desc);
     if (error != BYNAR_OK)
-        return - 2;
-
+    {
+        free(st.data FOR_CANARY(- sizeof(CANARY)));
+        return -2;
+    }
     return descriptor;
 }
+
+// stack_t* get_stack(int descriptor)
 
 ErrorStack push_stack(int descriptor, size_t size_element, const void *value FOR_DEBUG(, Init init))
 {
     stack_t *st = (stack_t*)find_elem(&tree, &descriptor, comparison_with_descr);
-    CHECK_STACK(st, init)
+    CHECK_STACK(st, init);
+
     st->size += size_element + sizeof(size_t);
     ErrorStack error = realocation_st(st);
     if (error!= OK)
@@ -108,28 +122,32 @@ ErrorStack push_stack(int descriptor, size_t size_element, const void *value FOR
 
     memcpy(st->data + st->size - size_element - sizeof(size_t), value, size_element);
     memcpy(st->data + st->size - sizeof(size_t), &size_element, sizeof(size_t));
-    CHECK_STACK(st, init)
+    CHECK_STACK(st, init);
     return OK;
 }
 
 ErrorStack pop_stack(int descriptor, void *value FOR_DEBUG(, Init init))
 {
     stack_t *st = (stack_t*)find_elem(&tree, &descriptor, comparison_with_descr);
-    CHECK_STACK(st, init)
+    CHECK_STACK(st, init);
+
     size_t size_element = *(size_t*)(st->data + st->size - sizeof(size_t));
     st->size -= size_element + sizeof(size_t);
-    memcpy(value, st->data + st->size, size_element);
+
+    if (value != NULL)
+        memcpy(value, st->data + st->size, size_element);
 
     ErrorStack error = realocation_st(st);
     if (error!= OK)
         return error;
 
-    CHECK_STACK(st, init)
+    CHECK_STACK(st, init);
     return OK;
 }
 
 static ErrorStack realocation_st(stack_t *st)
 {
+    // Magic numbers!!! 2 4 2
     if (st->capacity <= st->size)
     {
         void *temp = NULL;
@@ -140,6 +158,7 @@ static ErrorStack realocation_st(stack_t *st)
         st->capacity *= 2;
         st->data = temp FOR_CANARY(+ sizeof(CANARY));
     }
+
     if (st->capacity >= 4 * st->size && st->capacity > SIZEBUFFER)
     {
         void *temp = NULL;
@@ -150,6 +169,7 @@ static ErrorStack realocation_st(stack_t *st)
         st->capacity /= 2;
         st->data = temp FOR_CANARY(+ sizeof(CANARY));
     }
+
     FOR_CANARY(memcpy(st->data + st->capacity, &CANARY, sizeof(CANARY));)
     return OK;
 }
@@ -182,7 +202,7 @@ ErrorStack destroy_stack(int descriptor)
     return OK;
 }
 
-static ErrorStack stack_error(stack_t *st)
+static ErrorStack stack_error(const stack_t *st)
 {
     if (st == NULL)
         return STACK_NULL_PTR;
@@ -220,7 +240,7 @@ static ErrorStack stack_error(stack_t *st)
 
 #ifndef NO_DEBUG
 
-static void dump(const char *error, stack_t *st, Init init)
+static void dump(const char *error, const stack_t *st, Init init)
 {
     FILE *fp = fopen(FILENAME, "a");
 
