@@ -18,7 +18,7 @@ int main()
     printf("*********************\n");
     for (int i = 0; i < 12; i++)
     {
-        pop_stack(descriptor, &value FOR_DEBUG(, __INIT__));
+        pop_stack(descriptor, sizeof(int), &value FOR_DEBUG(, __INIT__));
         printf("Stack: %d\n\n", value);
     }
     destroy_stack(descriptor);

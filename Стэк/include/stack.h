@@ -19,7 +19,8 @@ enum ErrorStack
     STACK_NULL_PTR           = 7,
     LEFT_BUFFER_CANARY_DEAD  = 8,
     RIGHT_BUFFER_CANARY_DEAD = 9,
-    ERROR_ALLOCATION         = 10
+    ERROR_ALLOCATION         = 10,
+    SIZE_MISMATCH            = 11
 };
 
 #ifndef NO_DEBUG
@@ -33,8 +34,7 @@ struct Init
 
 int create_stack(size_t capacity FOR_DEBUG(, Init init, const char *name));
 ErrorStack push_stack(int descriptor, size_t size_element, const void *value FOR_DEBUG(, Init init));
-//                                 size_t size_element (element_size)
-ErrorStack pop_stack(int descriptor, void *value FOR_DEBUG(, Init init));
+ErrorStack pop_stack(int descriptor, size_t size_element, void *value FOR_DEBUG(, Init init));
 ErrorStack destroy_stack(int descriptor);
 
 

@@ -129,13 +129,16 @@ ErrorStack push_stack(int descriptor, size_t size_element, const void *value FOR
     return OK;
 }
 
-ErrorStack pop_stack(int descriptor, void *value FOR_DEBUG(, Init init))
+ErrorStack pop_stack(int descriptor, size_t size_element, void *value FOR_DEBUG(, Init init))
 {
     stack_t *st = (stack_t*)find_elem(&tree, &descriptor, comparison_with_descr);
     CHECK_STACK(st, init);
     FOR_HASH(CHECK_HASH(st);)
 
-    size_t size_element = *(size_t*)(st->data + st->size - sizeof(size_t));
+    size_t size_element_real = *(size_t*)(st->data + st->size - sizeof(size_t));
+    if (size_element_real != size_element)
+        return SIZE_MISMATCH;
+
     st->size -= size_element + sizeof(size_t);
 
     if (value != NULL)
