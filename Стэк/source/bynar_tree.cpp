@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+static void dtor_tree(Top *top);
+
 ErrorBynarTree create_bynar_tree(BynarTree *tree, size_t size_element)
 {
     tree->root = NULL;
@@ -143,6 +145,32 @@ bool delete_elem(BynarTree *tree, const void *value, int (*comparison)(const voi
     free(delete_top);
     return true;
 }
+
+void destroy_bynar_tree(BynarTree *tree)
+{
+    dtor_tree(tree->root);
+    free(tree->root);
+    free(tree->root->element);
+}
+
+static void dtor_tree(Top *top)
+{
+    if (top->left != NULL)
+    {
+        free(top->left);
+        free(top->left->element);
+        dtor_tree(top->left);
+    }
+    if (top->right != NULL)
+    {
+        free(top->right);
+        free(top->left->element);
+        dtor_tree(top->right);
+    }
+}
+
+
+
 
 
 

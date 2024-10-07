@@ -26,6 +26,6 @@ ErrorBynarTree create_bynar_tree(BynarTree *tree, size_t size_element);
 ErrorBynarTree insert_top(BynarTree *tree, const void *value, int (*comparison)(const void*, const void*));
 void* find_elem(const BynarTree *tree, const void *value, int (*comparison)(const void*, const void*));
 bool delete_elem(BynarTree *tree, const void *value, int (*comparison)(const void*, const void*));
-// destruct_bynar_tree()
+void destroy_bynar_tree(BynarTree *tree);
 
 #endif
