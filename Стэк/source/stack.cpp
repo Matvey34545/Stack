@@ -192,12 +192,6 @@ static int comparison_with_descr(const void *descr, const void *st)
 ErrorStack destroy_stack(int descriptor)
 {
     stack_t *st = (stack_t*)find_elem(&tree, &descriptor, comparison_with_descr);
-    if (st == NULL)
-        return STACK_NULL_PTR;
-
-    if (st->data == NULL)
-        return BUFFER_NULL_PTR;
-
     free(st->data FOR_CANARY(- sizeof(CANARY)));
     delete_elem(&tree, &descriptor, comparison_desc);
     return OK;
