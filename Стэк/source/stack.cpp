@@ -69,19 +69,12 @@ int create_stack(size_t capacity FOR_DEBUG(,Init init, const char* name))
     static bool struct_descrip_is_ready = false;
     if (!struct_descrip_is_ready)
     {
-        srand(time(NULL));
         create_bynar_tree(&tree, sizeof(stack_t));
         struct_descrip_is_ready = true;
     }
 
-    int descriptor = -1;
-    void *ptr = NULL;
-    do
-    {
-        descriptor = rand();
-        ptr = find_elem(&tree, &descriptor, comparison_with_descr);
-    } while (ptr != NULL);
-
+    srand(time(NULL));
+    int descriptor = rand();
     stack_t st = {FOR_CANARY(CANARY,) descriptor, FOR_HASH(0, 0,) capacity, 0, NULL
                   FOR_DEBUG(,{init.line, init.file, (char*)init.func, name}) FOR_CANARY(, CANARY)};
 
